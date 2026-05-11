@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>\u6597\u5730\u4E3B</title>
+<title>斗地主</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 html,body{width:100%;height:100%;overflow:hidden;background:#0a3d1f;font-family:'PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif;color:#fff;-webkit-text-size-adjust:100%;font-size:14px}
@@ -68,18 +68,18 @@ html,body{width:100%;height:100%;overflow:hidden;background:#0a3d1f;font-family:
 .seat{display:flex;flex-direction:column;align-items:flex-start;gap:6px;transition:opacity 0.2s}
 .seat-top-right .seat{align-items:flex-end}
 .seat.active{filter:drop-shadow(0 0 8px #ffd966)}
-.seat-header{display:flex;align-items:center;gap:6px}
-.seat-name{font-size:13px;font-weight:500}
-.seat-cnt{font-size:11px;color:rgba(255,255,255,0.6)}
-.role{font-size:10px;padding:2px 6px;border-radius:8px;background:rgba(255,255,255,0.1)}
+.seat-header{display:flex;align-items:center;gap:4px;flex-wrap:wrap;max-width:100%}
+.seat-name{font-size:12px;font-weight:500;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.seat-cnt{font-size:10px;color:rgba(255,255,255,0.6)}
+.role{font-size:9px;padding:1px 5px;border-radius:7px;background:rgba(255,255,255,0.1)}
 .role.landlord{background:#c83232;color:#fff;font-weight:bold}
 .role.farmer{background:rgba(110,200,110,0.3);color:#9eea9e}
 .seat-score{font-size:11px;color:#ffd966}
-.hand-mini{display:flex;flex-direction:row;margin-top:4px}
-.hand-mini .card.back{margin-left:-30px}
-.hand-mini .card.back:first-child{margin-left:0}
-.hand-mini .card{margin-left:-32px}
+.hand-mini{display:flex;flex-direction:row;margin-top:4px;flex-wrap:nowrap;max-width:100%;overflow:hidden}
+.hand-mini .card{width:26px;height:38px;margin-left:-18px;font-size:8px;flex-shrink:1;min-width:0}
 .hand-mini .card:first-child{margin-left:0}
+.hand-mini .card .card-tl,.hand-mini .card .card-c,.hand-mini .card .card-br{display:none}
+.seat-top-right .hand-mini{justify-content:flex-end}
 
 /* center area: phase info + last played + bottom reveal */
 .center-area{grid-column:1/-1;grid-row:2;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px}
@@ -185,14 +185,14 @@ html,body{width:100%;height:100%;overflow:hidden;background:#0a3d1f;font-family:
 
 <!-- ========== MENU VIEW ========== -->
 <div id="viewMenu">
-  <div class="menu-title">\u6597\u5730\u4E3B</div>
+  <div class="menu-title">斗地主</div>
   <div class="menu-sub">DOU DI ZHU</div>
   <div class="menu-buttons">
-    <button class="abtn primary" id="btnSinglePlayer">\u5355\u673A\u6E38\u620F</button>
-    <button class="abtn" id="btnCreateRoom">\u521B\u5EFA\u8054\u673A\u623F\u95F4</button>
-    <button class="abtn" id="btnJoinRoom">\u52A0\u5165\u623F\u95F4</button>
-    <button class="abtn" id="btnStats">\u6218\u7EE9</button>
-    <button class="abtn" id="btnRules">\u89C4\u5219</button>
+    <button class="abtn primary" id="btnSinglePlayer">单机游戏</button>
+    <button class="abtn" id="btnCreateRoom">创建联机房间</button>
+    <button class="abtn" id="btnJoinRoom">加入房间</button>
+    <button class="abtn" id="btnStats">战绩</button>
+    <button class="abtn" id="btnRules">规则</button>
   </div>
 </div>
 
@@ -204,8 +204,8 @@ html,body{width:100%;height:100%;overflow:hidden;background:#0a3d1f;font-family:
   <div class="top-bar">
     <div class="tb-info" id="phaseInfo"></div>
     <div class="tb-actions">
-      <button class="tb-btn" id="btnCheat">\u660E\u724C</button>
-      <button class="tb-btn" id="btnGameExit">\u9000\u51FA</button>
+      <button class="tb-btn" id="btnCheat">明牌</button>
+      <button class="tb-btn" id="btnGameExit">退出</button>
     </div>
   </div>
   <div class="table">
@@ -213,11 +213,11 @@ html,body{width:100%;height:100%;overflow:hidden;background:#0a3d1f;font-family:
     <div class="seat-top-left">
       <div class="seat" id="seat_left">
         <div class="seat-header">
-          <span class="seat-name" id="name_left">\u73A9\u5BB6</span>
+          <span class="seat-name" id="name_left">玩家</span>
           <span class="role" id="role_left"></span>
-          <span class="seat-cnt" id="cnt_left">0\u5F20</span>
+          <span class="seat-cnt" id="cnt_left">0张</span>
         </div>
-        <div class="seat-score">\u7D2F\u8BA1: <span id="score_left">0</span></div>
+        <div class="seat-score">累计: <span id="score_left">0</span></div>
         <div class="hand-mini" id="hand_left"></div>
       </div>
     </div>
@@ -226,10 +226,10 @@ html,body{width:100%;height:100%;overflow:hidden;background:#0a3d1f;font-family:
       <div class="seat" id="seat_right">
         <div class="seat-header">
           <span class="role" id="role_right"></span>
-          <span class="seat-cnt" id="cnt_right">0\u5F20</span>
-          <span class="seat-name" id="name_right">\u73A9\u5BB6</span>
+          <span class="seat-cnt" id="cnt_right">0张</span>
+          <span class="seat-name" id="name_right">玩家</span>
         </div>
-        <div class="seat-score">\u7D2F\u8BA1: <span id="score_right">0</span></div>
+        <div class="seat-score">累计: <span id="score_right">0</span></div>
         <div class="hand-mini" id="hand_right"></div>
       </div>
     </div>
@@ -244,10 +244,10 @@ html,body{width:100%;height:100%;overflow:hidden;background:#0a3d1f;font-family:
     <div class="seat-bottom">
       <div class="seat" id="seat_bottom" style="align-items:center">
         <div class="seat-header">
-          <span class="seat-name" id="name_bottom">\u73A9\u5BB6</span>
+          <span class="seat-name" id="name_bottom">玩家</span>
           <span class="role" id="role_bottom"></span>
-          <span class="seat-cnt" id="cnt_bottom">0\u5F20</span>
-          <span class="seat-score">\u7D2F\u8BA1: <span id="score_bottom">0</span></span>
+          <span class="seat-cnt" id="cnt_bottom">0张</span>
+          <span class="seat-score">累计: <span id="score_bottom">0</span></span>
         </div>
       </div>
       <div id="hand_bottom"></div>
@@ -263,23 +263,23 @@ html,body{width:100%;height:100%;overflow:hidden;background:#0a3d1f;font-family:
 
 <div class="modal" id="rulesModal">
   <div class="modal-content">
-    <div class="modal-title">\u89C4\u5219</div>
+    <div class="modal-title">规则</div>
     <div class="rules-text">
-      <h4>\u6E38\u620F\u6982\u8FF0</h4>
-      <p>\u4E09\u4EBA\u6597\u5730\u4E3B\u3002\u4F7F\u752854\u5F20\u724C\uFF0817\u00D73 + 3\u5E95\u724C\uFF09\u3002</p>
-      <h4>\u53EB\u5206</h4>
-      <p>\u53EB\u52061/2/3\u5206\uFF0C\u6700\u9AD8\u5206\u4EBA\u4E3A\u5730\u4E3B\u3002\u4E09\u4EBA\u90FD\u4E0D\u53EB\u5219\u91CD\u53D1\u3002</p>
-      <h4>\u724C\u578B</h4>
-      <p>\u5355\u3001\u5BF9\u3001\u4E09\u5F20\u3001\u4E09\u5E261\u3001\u4E09\u5E262\u3001\u987A\u5B50\u3001\u8FDE\u5BF9\u3001\u98DE\u673A\u3001\u56DB\u5E262\u3001\u70B8\u5F39\u3001\u706B\u706B\u3002</p>
-      <p>\u706B\u706B = \u5C0F\u738B+\u5927\u738B\uFF0C\u53EF\u70B8\u5207\u3002\u70B8\u5F39\u80FD\u70B8\u9664\u706B\u706B\u4EE5\u5916\u7684\u4EFB\u4F55\u724C\u578B\u3002</p>
-      <h4>\u8BA1\u5206</h4>
-      <p>\u6BCF\u4E2A\u70B8\u5F39\u52A0\u500D\uFF1B\u6625\u5929\uFF08\u5730\u4E3B\u8FDE\u80DC\u4E14\u519C\u6C11\u672A\u51FA\u724C\uFF09\u4E5F\u52A0\u500D\u3002</p>
-      <p>\u5730\u4E3B\u8D62\uFF1A\u5730\u4E3B+2\u00D7\u5F97\u5206\uFF0C\u519C\u6C11\u5404-1\u00D7\u3002\u5730\u4E3B\u8F93\u5219\u53CD\u8FC7\u6765\u3002</p>
-      <h4>\u8054\u673A</h4>
-      <p>\u521B\u5EFA\u623F\u95F4\u540E\u590D\u5236\u623F\u95F4\u53F7\uFF0C\u53D1\u7ED9\u670B\u53CB\u4ECE"\u52A0\u5165\u623F\u95F4"\u8F93\u5165\u52A0\u5165\u3002\u7A7A\u4F4D\u7531 AI \u8865\u4F4D\u3002</p>
+      <h4>游戏概述</h4>
+      <p>三人斗地主。使用54张牌（17×3 + 3底牌）。</p>
+      <h4>叫分</h4>
+      <p>叫分1/2/3分，最高分人为地主。三人都不叫则重发。</p>
+      <h4>牌型</h4>
+      <p>单、对、三张、三带1、三带2、顺子、连对、飞机、四带2、炸弹、火火。</p>
+      <p>火火 = 小王+大王，可炸切。炸弹能炸除火火以外的任何牌型。</p>
+      <h4>计分</h4>
+      <p>每个炸弹加倍；春天（地主连胜且农民未出牌）也加倍。</p>
+      <p>地主赢：地主+2×得分，农民各-1×。地主输则反过来。</p>
+      <h4>联机</h4>
+      <p>创建房间后复制房间号，发给朋友从"加入房间"输入加入。空位由 AI 补位。</p>
     </div>
     <div class="modal-actions">
-      <button class="abtn primary" id="btnRulesClose">\u77E5\u9053\u4E86</button>
+      <button class="abtn primary" id="btnRulesClose">知道了</button>
     </div>
   </div>
 </div>

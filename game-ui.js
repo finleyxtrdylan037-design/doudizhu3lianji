@@ -56,7 +56,7 @@ var App={
   engine:null,
   net:null,
   mySeat:0,
-  myName:'\u73A9\u5BB6',
+  myName:'玩家',
   humanAdapter:null,
   remoteState:null,
   selectedCardIds:{},
@@ -128,11 +128,11 @@ function render(){
     var roleEl=document.getElementById('role_'+pos);
     var handEl=document.getElementById('hand_'+pos);
     var scoreEl=document.getElementById('score_'+pos);
-    if(nameEl) nameEl.textContent=(st.playerNames&&st.playerNames[seat])||('\u73A9\u5BB6'+(seat+1));
-    if(cntEl) cntEl.textContent=(st.handLengths?st.handLengths[seat]:0)+'\u5F20';
+    if(nameEl) nameEl.textContent=(st.playerNames&&st.playerNames[seat])||('玩家'+(seat+1));
+    if(cntEl) cntEl.textContent=(st.handLengths?st.handLengths[seat]:0)+'张';
     if(roleEl){
-      if(seat===st.landlordIdx){roleEl.textContent='\u5730\u4E3B';roleEl.className='role landlord';}
-      else if(st.landlordIdx>=0){roleEl.textContent='\u519C\u6C11';roleEl.className='role farmer';}
+      if(seat===st.landlordIdx){roleEl.textContent='地主';roleEl.className='role landlord';}
+      else if(st.landlordIdx>=0){roleEl.textContent='农民';roleEl.className='role farmer';}
       else {roleEl.textContent='';roleEl.className='role';}
     }
     if(scoreEl) scoreEl.textContent=(st.cumulativeScores?st.cumulativeScores[seat]:0);
@@ -165,8 +165,8 @@ function render(){
   }
   var phaseEl=document.getElementById('phaseInfo');
   if(phaseEl){
-    if(st.phase==='bid') phaseEl.textContent='\u53EB\u5206\u9636\u6BB5 \u00B7 \u5F53\u524D\u6700\u9AD8 '+(st.bidValue||0)+'\u5206';
-    else if(st.phase==='play') phaseEl.textContent='\u51FA\u724C \u00B7 \u500D\u6570 '+((App.engine&&App.engine.calcMult)?App.engine.calcMult():1)+'x';
+    if(st.phase==='bid') phaseEl.textContent='叫分阶段 · 当前最高 '+(st.bidValue||0)+'分';
+    else if(st.phase==='play') phaseEl.textContent='出牌 · 倍数 '+((App.engine&&App.engine.calcMult)?App.engine.calcMult():1)+'x';
     else phaseEl.textContent='';
   }
 }
@@ -185,12 +185,12 @@ function showPlayed(seat,cards,isBomb){
 function showPass(seat){
   var pos=posFromSeat(seat);
   var el=document.getElementById('played_'+pos);
-  if(el) el.innerHTML='<div class="pass-tag">\u4E0D\u8981</div>';
+  if(el) el.innerHTML='<div class="pass-tag">不要</div>';
 }
 function showBid(seat,value){
   var pos=posFromSeat(seat);
   var el=document.getElementById('played_'+pos);
-  if(el) el.innerHTML='<div class="bid-tag">'+(value===0?'\u4E0D\u53EB':(value+'\u5206'))+'</div>';
+  if(el) el.innerHTML='<div class="bid-tag">'+(value===0?'不叫':(value+'分'))+'</div>';
 }
 function clearAllPlayed(){
   var ps=['bottom','right','left'];
@@ -225,9 +225,9 @@ function showBidButtons(currentBid){
   var bar=document.getElementById('actionBar');
   if(!bar)return;
   var html='';
-  html+='<button class="abtn" data-bid="0">\u4E0D\u53EB</button>';
+  html+='<button class="abtn" data-bid="0">不叫</button>';
   for(var v=Math.max(1,currentBid+1);v<=3;v++){
-    html+='<button class="abtn primary" data-bid="'+v+'">'+v+'\u5206</button>';
+    html+='<button class="abtn primary" data-bid="'+v+'">'+v+'分</button>';
   }
   bar.innerHTML=html;
   var btns=bar.querySelectorAll('.abtn');
@@ -244,9 +244,9 @@ function showPlayButtons(canPass){
   var bar=document.getElementById('actionBar');
   if(!bar)return;
   var html='';
-  if(canPass) html+='<button class="abtn" id="btnPass">\u4E0D\u8981</button>';
-  html+='<button class="abtn" id="btnHint">\u63D0\u793A</button>';
-  html+='<button class="abtn primary" id="btnPlay">\u51FA\u724C</button>';
+  if(canPass) html+='<button class="abtn" id="btnPass">不要</button>';
+  html+='<button class="abtn" id="btnHint">提示</button>';
+  html+='<button class="abtn primary" id="btnPlay">出牌</button>';
   bar.innerHTML=html;
   var bp=document.getElementById('btnPass');
   if(bp) bp.addEventListener('click',function(){submitPlay(null);});
@@ -255,7 +255,7 @@ function showPlayButtons(canPass){
   var bpl=document.getElementById('btnPlay');
   if(bpl) bpl.addEventListener('click',function(){
     var sel=getSelectedCards();
-    if(!sel.length){toast('\u8BF7\u9009\u62E9\u8981\u51FA\u7684\u724C');return;}
+    if(!sel.length){toast('请选择要出的牌');return;}
     submitPlay(sel);
   });
 }
@@ -277,7 +277,7 @@ function doHint(){
     App.hintList=DDZ.generateHints(hand,lp,st.lastPlayPlayer,App.mySeat);
     App.hintIdx=-1;
   }
-  if(!App.hintList.length){toast('\u65E0\u724C\u53EF\u51FA');return;}
+  if(!App.hintList.length){toast('无牌可出');return;}
   App.hintIdx=(App.hintIdx+1)%App.hintList.length;
   var pick=App.hintList[App.hintIdx];
   App.selectedCardIds={};
@@ -302,17 +302,17 @@ function submitPlay(cards){
   var st=getDisplayState();
   var free=!st.lastPlay||st.lastPlayPlayer===App.mySeat;
   if(!cards){
-    if(free){toast('\u4F60\u51FA\u724C\uFF0C\u4E0D\u80FD\u4E0D\u8981');return;}
+    if(free){toast('你出牌，不能不要');return;}
     clearActionBar();clearSelection();
     if(App.gameMode==='guest'){if(App.net) App.net.sendPlay(null);}
     else if(App.humanAdapter&&App.humanAdapter.pendingType==='play') App.humanAdapter.submit(null);
     return;
   }
   var play=DDZ.analyzeCards(cards);
-  if(!play){toast('\u724C\u578B\u4E0D\u5408\u6CD5');return;}
+  if(!play){toast('牌型不合法');return;}
   if(!free){
     var lp={type:st.lastPlay.type,rank:st.lastPlay.rank,len:st.lastPlay.len,planeLen:st.lastPlay.planeLen};
-    if(!DDZ.canBeat(play,lp)){toast('\u538B\u4E0D\u4F4F\u4E0A\u5BB6');return;}
+    if(!DDZ.canBeat(play,lp)){toast('压不住上家');return;}
   }
   clearActionBar();clearSelection();
   if(App.gameMode==='guest'){if(App.net) App.net.sendPlay(DDZ.cardsToIds(cards));}
@@ -335,26 +335,26 @@ function showResult(info){
   var winFarm=(info.winnerIdx!==info.landlordIdx);
   var mySide=(App.mySeat===info.landlordIdx)?'landlord':'farmer';
   var iWon=(mySide==='landlord'&&!winFarm)||(mySide==='farmer'&&winFarm);
-  var title=iWon?'\u80DC\u5229':'\u5931\u8D25';
+  var title=iWon?'胜利':'失败';
   var lines=[];
-  lines.push('\u5730\u4E3B\uFF1A'+(info.playerNames?info.playerNames[info.landlordIdx]:'?'));
-  lines.push('\u57FA\u672C\u5206\uFF1A'+info.baseBid+' \u00D7 \u500D\u6570 '+info.multiplier);
-  if(info.spring) lines.push('\u6625\u5929\uFF01');
-  if(info.antiSpring) lines.push('\u53CD\u6625\u5929\uFF01');
-  lines.push('\u672C\u5C40\u5F97\u5206\uFF1A'+(info.deltas?info.deltas[App.mySeat]:0));
-  lines.push('\u7D2F\u8BA1\u5F97\u5206\uFF1A'+info.cumulativeScores[App.mySeat]);
+  lines.push('地主：'+(info.playerNames?info.playerNames[info.landlordIdx]:'?'));
+  lines.push('基本分：'+info.baseBid+' × 倍数 '+info.multiplier);
+  if(info.spring) lines.push('春天！');
+  if(info.antiSpring) lines.push('反春天！');
+  lines.push('本局得分：'+(info.deltas?info.deltas[App.mySeat]:0));
+  lines.push('累计得分：'+info.cumulativeScores[App.mySeat]);
   var html='<div class="result-box '+(iWon?'win':'lose')+'">';
   html+='<div class="result-title">'+title+'</div>';
   for(var i=0;i<lines.length;i++) html+='<div class="result-line">'+lines[i]+'</div>';
   html+='<div class="result-buttons">';
   if(App.gameMode==='single'){
-    html+='<button class="abtn primary" id="btnNextRound">\u4E0B\u4E00\u5C40</button>';
+    html+='<button class="abtn primary" id="btnNextRound">下一局</button>';
   } else if(App.gameMode==='host'){
-    html+='<button class="abtn primary" id="btnNextRound">\u4E0B\u4E00\u5C40</button>';
+    html+='<button class="abtn primary" id="btnNextRound">下一局</button>';
   } else {
-    html+='<div class="result-line dim">\u7B49\u5F85\u623F\u4E3B\u5F00\u59CB\u4E0B\u5C40\u2026</div>';
+    html+='<div class="result-line dim">等待房主开始下局…</div>';
   }
-  html+='<button class="abtn" id="btnExitGame">\u9000\u51FA</button>';
+  html+='<button class="abtn" id="btnExitGame">退出</button>';
   html+='</div></div>';
   ov.innerHTML=html;
   ov.style.display='flex';
@@ -431,32 +431,32 @@ function showStats(){
   if(!App.stats)loadStats();
   var s=App.stats;
   var winRate=s.totalGames>0?Math.round(s.wins/s.totalGames*100):0;
-  var html='<div class="modal-content"><div class="modal-title">\u6218\u7EE9</div>';
+  var html='<div class="modal-content"><div class="modal-title">战绩</div>';
   html+='<div class="stats-grid">';
-  html+='<div class="stats-item"><div class="stats-label">\u603B\u573A\u6B21</div><div class="stats-val">'+s.totalGames+'</div></div>';
-  html+='<div class="stats-item"><div class="stats-label">\u80DC\u5229</div><div class="stats-val">'+s.wins+'</div></div>';
-  html+='<div class="stats-item"><div class="stats-label">\u5931\u8D25</div><div class="stats-val">'+s.losses+'</div></div>';
-  html+='<div class="stats-item"><div class="stats-label">\u80DC\u7387</div><div class="stats-val">'+winRate+'%</div></div>';
+  html+='<div class="stats-item"><div class="stats-label">总场次</div><div class="stats-val">'+s.totalGames+'</div></div>';
+  html+='<div class="stats-item"><div class="stats-label">胜利</div><div class="stats-val">'+s.wins+'</div></div>';
+  html+='<div class="stats-item"><div class="stats-label">失败</div><div class="stats-val">'+s.losses+'</div></div>';
+  html+='<div class="stats-item"><div class="stats-label">胜率</div><div class="stats-val">'+winRate+'%</div></div>';
   html+='</div>';
-  html+='<div class="stats-list-title">\u6700\u8FD1\u5BF9\u5C40</div>';
+  html+='<div class="stats-list-title">最近对局</div>';
   html+='<div class="stats-list">';
-  if(!s.rounds.length) html+='<div class="empty">\u6682\u65E0\u8BB0\u5F55</div>';
+  if(!s.rounds.length) html+='<div class="empty">暂无记录</div>';
   for(var i=0;i<Math.min(s.rounds.length,20);i++){
     var r=s.rounds[i];
-    var role=(r.mySeat===r.landlord)?'\u5730\u4E3B':'\u519C\u6C11';
+    var role=(r.mySeat===r.landlord)?'地主':'农民';
     var won=((r.mySeat===r.landlord)===(r.winner===r.landlord));
     var sign=r.delta>=0?'+':'';
     html+='<div class="stats-row '+(won?'win':'lose')+'">';
     html+='<span class="sr-role">'+role+'</span>';
     html+='<span class="sr-pts">'+sign+r.delta+'</span>';
-    html+='<span class="sr-mult">'+r.baseBid+'\u00D7'+r.multiplier+(r.spring?' \u6625':'')+(r.antiSpring?' \u53CD\u6625':'')+'</span>';
-    html+='<span class="sr-cum">\u7D2F\u8BA1 '+r.cumulative+'</span>';
+    html+='<span class="sr-mult">'+r.baseBid+'×'+r.multiplier+(r.spring?' 春':'')+(r.antiSpring?' 反春':'')+'</span>';
+    html+='<span class="sr-cum">累计 '+r.cumulative+'</span>';
     html+='</div>';
   }
   html+='</div>';
   html+='<div class="modal-actions">';
-  html+='<button class="abtn" id="btnClearStats">\u6E05\u9664\u8BB0\u5F55</button>';
-  html+='<button class="abtn primary" id="btnCloseStats">\u5173\u95ED</button>';
+  html+='<button class="abtn" id="btnClearStats">清除记录</button>';
+  html+='<button class="abtn primary" id="btnCloseStats">关闭</button>';
   html+='</div></div>';
   modal.innerHTML=html;
   modal.style.display='flex';
@@ -464,7 +464,7 @@ function showStats(){
   if(bc) bc.addEventListener('click',function(){modal.style.display='none';modal.innerHTML='';});
   var bcl=document.getElementById('btnClearStats');
   if(bcl) bcl.addEventListener('click',function(){
-    if(confirm('\u786E\u8BA4\u6E05\u9664\u6240\u6709\u6218\u7EE9\u8BB0\u5F55\uFF1F')){
+    if(confirm('确认清除所有战绩记录？')){
       App.stats={rounds:[],totalGames:0,wins:0,losses:0};
       persistStats();showStats();
     }
@@ -494,7 +494,7 @@ function startSingle(){
     players:[App.humanAdapter,
              new DDZ.AIAdapter({thinkMin:600,thinkMax:1100}),
              new DDZ.AIAdapter({thinkMin:600,thinkMax:1100})],
-    names:[App.myName,'AI \u4E59','AI \u4E19'],
+    names:[App.myName,'AI 乙','AI 丙'],
     onEvent:onEngineEvent,
     onState:onEngineState,
     onSettle:onEngineSettle,
@@ -536,7 +536,7 @@ function onEngineEvent(ev){
       if(App.gameMode==='host'&&App.net) App.net.broadcastEvent(ev);
       break;
     case'bidRedeal':
-      toast('\u4E09\u4EBA\u4E0D\u53EB\uFF0C\u91CD\u53D1');
+      toast('三人不叫，重发');
       if(App.gameMode==='host'&&App.net) App.net.broadcastEvent(ev);
       break;
     case'bidFinal':
@@ -792,10 +792,10 @@ function hostCreateRoom(cb){
     peer.on('open',function(id){net.hostPeerId=id;cb(null,net);});
     peer.on('error',function(e){
       console.error('host peer error',e);
-      toast('\u8054\u673A\u9519\u8BEF\uFF1A'+((e&&e.type)||'unknown'));
+      toast('联机错误：'+((e&&e.type)||'unknown'));
     });
     peer.on('connection',function(conn){
-      var clientName='\u73A9\u5BB6';
+      var clientName='玩家';
       var seat=-1;
       conn.on('open',function(){
         seat=net.findFreeSeat();
@@ -808,7 +808,7 @@ function hostCreateRoom(cb){
         if(!data||!data.type)return;
         switch(data.type){
           case'hello':
-            clientName=(data.name||'\u73A9\u5BB6').substring(0,12);
+            clientName=(data.name||'玩家').substring(0,12);
             if(net.conns[conn.peer]) net.conns[conn.peer].name=clientName;
             net.broadcastLobby();
             break;
@@ -911,15 +911,15 @@ function guestJoinRoom(roomCode,myName,cb){
       conn.on('open',function(){try{conn.send({type:'hello',name:myName});}catch(e){}});
       conn.on('data',function(data){if(data&&data.type) handleHostMessage(net,data);});
       conn.on('close',function(){
-        toast('\u4E0E\u623F\u4E3B\u65AD\u5F00\u8FDE\u63A5');
+        toast('与房主断开连接');
         setTimeout(function(){exitToMenu();},1500);
       });
       conn.on('error',function(){cb(new Error('connect failed'));});
     });
     peer.on('error',function(e){
       var et=e&&e.type;
-      if(et==='peer-unavailable'){toast('\u623F\u95F4\u4E0D\u5B58\u5728');cb(new Error('peer-unavailable'));return;}
-      toast('\u8054\u673A\u9519\u8BEF\uFF1A'+(et||'unknown'));
+      if(et==='peer-unavailable'){toast('房间不存在');cb(new Error('peer-unavailable'));return;}
+      toast('联机错误：'+(et||'unknown'));
       cb(e);
     });
     cb(null,net);
@@ -933,7 +933,7 @@ function handleHostMessage(net,data){
       if(App.onLobby) App.onLobby({roomCode:data.roomCode,seat:data.seat});
       break;
     case'rejected':
-      toast('\u52A0\u5165\u88AB\u62D2\uFF1A\u623F\u95F4\u5DF2\u6EE1');
+      toast('加入被拒：房间已满');
       setTimeout(function(){exitToMenu();},1500);
       break;
     case'lobby':
@@ -1009,23 +1009,23 @@ function showLobbyHost(net){
   var info=net.buildLobbyInfo();
   var displayCode=net.hostPeerId;
   var html='<div class="lobby-panel">';
-  html+='<div class="lobby-title">\u521B\u5EFA\u623F\u95F4</div>';
-  html+='<div class="lobby-roomcode"><div class="rc-label">\u623F\u95F4\u53F7</div><div class="rc-val" id="rcVal">'+displayCode+'</div></div>';
-  html+='<div class="rc-hint">\u70B9\u51FB\u53F7\u590D\u5236 \u00B7 \u53D1\u7ED9\u670B\u53CB\u52A0\u5165</div>';
+  html+='<div class="lobby-title">创建房间</div>';
+  html+='<div class="lobby-roomcode"><div class="rc-label">房间号</div><div class="rc-val" id="rcVal">'+displayCode+'</div></div>';
+  html+='<div class="rc-hint">点击号复制 · 发给朋友加入</div>';
   html+='<div class="seat-list">';
   for(var s=0;s<3;s++){
     var n=info.seats[s];
-    html+='<div class="seat-row"><span class="seat-num">'+(s+1)+'\u53F7\u4F4D</span>';
-    if(n) html+='<span class="seat-name">'+n+(s===0?' (\u4F60)':'')+'</span><span class="seat-stat ready">\u5DF2\u5165\u5EA7</span>';
-    else html+='<span class="seat-name">--</span><span class="seat-stat empty">\u7B49\u5F85\u52A0\u5165</span>';
+    html+='<div class="seat-row"><span class="seat-num">'+(s+1)+'号位</span>';
+    if(n) html+='<span class="seat-name">'+n+(s===0?' (你)':'')+'</span><span class="seat-stat ready">已入座</span>';
+    else html+='<span class="seat-name">--</span><span class="seat-stat empty">等待加入</span>';
     html+='</div>';
   }
   html+='</div>';
   html+='<div class="lobby-actions">';
-  html+='<button class="abtn" id="btnLobbyBack">\u8FD4\u56DE</button>';
-  html+='<button class="abtn primary" id="btnHostStart">\u5F00\u59CB\u6E38\u620F</button>';
+  html+='<button class="abtn" id="btnLobbyBack">返回</button>';
+  html+='<button class="abtn primary" id="btnHostStart">开始游戏</button>';
   html+='</div>';
-  html+='<div class="rc-hint">\u7A7A\u4F4D\u4F1A\u7531 AI \u8865\u4F4D</div>';
+  html+='<div class="rc-hint">空位会由 AI 补位</div>';
   html+='</div>';
   lobby.innerHTML=html;
   document.getElementById('btnLobbyBack').addEventListener('click',exitToMenu);
@@ -1036,26 +1036,26 @@ function showLobbyHost(net){
     try{
       if(navigator.clipboard&&navigator.clipboard.writeText){
         navigator.clipboard.writeText(txt);
-        toast('\u5DF2\u590D\u5236\u623F\u95F4\u53F7');
+        toast('已复制房间号');
       } else {
         // fallback
         var ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);
-        ta.select();try{document.execCommand('copy');toast('\u5DF2\u590D\u5236');}catch(e){toast('\u8BF7\u624B\u52A8\u590D\u5236');}
+        ta.select();try{document.execCommand('copy');toast('已复制');}catch(e){toast('请手动复制');}
         document.body.removeChild(ta);
       }
-    }catch(e){toast('\u8BF7\u624B\u52A8\u590D\u5236');}
+    }catch(e){toast('请手动复制');}
   });
 }
 function showLobbyJoin(){
   var lobby=document.getElementById('viewLobby');
   if(!lobby)return;
   var html='<div class="lobby-panel">';
-  html+='<div class="lobby-title">\u52A0\u5165\u623F\u95F4</div>';
-  html+='<div class="lobby-input"><label>\u4F60\u7684\u6635\u79F0</label><input type="text" id="joinName" maxlength="12" value="'+(App.myName||'')+'"></div>';
-  html+='<div class="lobby-input"><label>\u623F\u95F4\u53F7</label><input type="text" id="joinCode" placeholder="\u7C98\u8D34\u623F\u4E3B\u7684\u53F7"></div>';
+  html+='<div class="lobby-title">加入房间</div>';
+  html+='<div class="lobby-input"><label>你的昵称</label><input type="text" id="joinName" maxlength="12" value="'+(App.myName||'')+'"></div>';
+  html+='<div class="lobby-input"><label>房间号</label><input type="text" id="joinCode" placeholder="粘贴房主的号"></div>';
   html+='<div class="lobby-actions">';
-  html+='<button class="abtn" id="btnLobbyBack">\u8FD4\u56DE</button>';
-  html+='<button class="abtn primary" id="btnDoJoin">\u52A0\u5165</button>';
+  html+='<button class="abtn" id="btnLobbyBack">返回</button>';
+  html+='<button class="abtn primary" id="btnDoJoin">加入</button>';
   html+='</div>';
   html+='<div id="joinStatus" class="join-status"></div>';
   html+='</div>';
@@ -1064,14 +1064,14 @@ function showLobbyJoin(){
   document.getElementById('btnDoJoin').addEventListener('click',function(){
     var name=(document.getElementById('joinName').value||'').trim().substring(0,12);
     var code=(document.getElementById('joinCode').value||'').trim();
-    if(!name){toast('\u8BF7\u8F93\u5165\u6635\u79F0');return;}
-    if(!code){toast('\u8BF7\u8F93\u5165\u623F\u95F4\u53F7');return;}
+    if(!name){toast('请输入昵称');return;}
+    if(!code){toast('请输入房间号');return;}
     App.myName=name;
     try{localStorage.setItem(NAME_KEY,name);}catch(e){}
     var ss=document.getElementById('joinStatus');
-    if(ss) ss.textContent='\u8FDE\u63A5\u4E2D\u2026';
+    if(ss) ss.textContent='连接中…';
     App.onLobby=function(info){
-      if(ss) ss.textContent='\u5DF2\u52A0\u5165 \u00B7 '+(info.seat+1)+'\u53F7\u4F4D';
+      if(ss) ss.textContent='已加入 · '+(info.seat+1)+'号位';
     };
     App.onLobbyUpdate=function(info){
       var sl=document.getElementById('joinSeats');
@@ -1082,16 +1082,16 @@ function showLobbyJoin(){
       var h='';
       for(var s=0;s<3;s++){
         var n=info.seats[s];
-        h+='<div class="seat-row"><span class="seat-num">'+(s+1)+'\u53F7\u4F4D</span>';
-        if(n) h+='<span class="seat-name">'+n+'</span><span class="seat-stat ready">\u5DF2\u5165\u5EA7</span>';
-        else h+='<span class="seat-name">--</span><span class="seat-stat empty">\u7A7A</span>';
+        h+='<div class="seat-row"><span class="seat-num">'+(s+1)+'号位</span>';
+        if(n) h+='<span class="seat-name">'+n+'</span><span class="seat-stat ready">已入座</span>';
+        else h+='<span class="seat-name">--</span><span class="seat-stat empty">空</span>';
         h+='</div>';
       }
-      h+='<div class="rc-hint">\u7B49\u5F85\u623F\u4E3B\u5F00\u59CB\u2026</div>';
+      h+='<div class="rc-hint">等待房主开始…</div>';
       sl.innerHTML=h;
     };
     guestJoinRoom(code,name,function(err,net){
-      if(err){if(ss)ss.textContent='\u8FDE\u63A5\u5931\u8D25\uFF1A'+(err.message||'');return;}
+      if(err){if(ss)ss.textContent='连接失败：'+(err.message||'');return;}
       App.net=net;App.gameMode='guest';
     });
   });
@@ -1109,12 +1109,12 @@ function wireMenu(){
       ensureAudio();
       showView('lobby');
       var lobby=document.getElementById('viewLobby');
-      if(lobby) lobby.innerHTML='<div class="lobby-panel"><div class="lobby-title">\u521B\u5EFA\u623F\u95F4</div><div class="rc-hint">\u8FDE\u63A5\u4E2D\u2026</div></div>';
+      if(lobby) lobby.innerHTML='<div class="lobby-panel"><div class="lobby-title">创建房间</div><div class="rc-hint">连接中…</div></div>';
       hostCreateRoom(function(err,net){
-        if(err){toast('\u521B\u5EFA\u5931\u8D25');exitToMenu();return;}
+        if(err){toast('创建失败');exitToMenu();return;}
         showLobbyHost(net);
         net.onLobby=function(){showLobbyHost(net);};
-        net.onClientDrop=function(seat){toast((seat+1)+'\u53F7\u4F4D\u73A9\u5BB6\u65AD\u7EBF\uFF0C\u5DF2\u7531 AI \u63A5\u7BA1');};
+        net.onClientDrop=function(seat){toast((seat+1)+'号位玩家断线，已由 AI 接管');};
       });
     });
   });
@@ -1134,8 +1134,8 @@ function wireMenu(){
   });
 }
 function promptName(cb){
-  if(App.myName&&App.myName!=='\u73A9\u5BB6'){cb();return;}
-  var nm=prompt('\u8BF7\u8F93\u5165\u6635\u79F0\uFF08\u6700\u591A12\u5B57\uFF09',App.myName||'\u73A9\u5BB6');
+  if(App.myName&&App.myName!=='玩家'){cb();return;}
+  var nm=prompt('请输入昵称（最多12字）',App.myName||'玩家');
   if(nm){
     App.myName=nm.substring(0,12);
     try{localStorage.setItem(NAME_KEY,App.myName);}catch(e){}
@@ -1163,7 +1163,7 @@ function wireGameView(){
   }
   var ex=document.getElementById('btnGameExit');
   if(ex) ex.addEventListener('click',function(){
-    if(confirm('\u786E\u8BA4\u9000\u51FA\u672C\u5C40\uFF1F')) exitToMenu();
+    if(confirm('确认退出本局？')) exitToMenu();
   });
   var cheat=document.getElementById('btnCheat');
   if(cheat) cheat.addEventListener('click',function(){

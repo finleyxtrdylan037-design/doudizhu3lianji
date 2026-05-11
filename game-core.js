@@ -13,8 +13,8 @@
    ============================================================ */
 var RANKS=['3','4','5','6','7','8','9','10','J','Q','K','A','2'];
 var RV={};for(var i=0;i<RANKS.length;i++)RV[RANKS[i]]=i+3;RV['SJ']=16;RV['BJ']=17;
-var SUITS=['\u2660','\u2665','\u2666','\u2663'];
-var SC={'\u2660':'black','\u2665':'red','\u2666':'red','\u2663':'black'};
+var SUITS=['♠','♥','♦','♣'];
+var SC={'♠':'black','♥':'red','♦':'red','♣':'black'};
 
 /* ============================================================
    2. DECK / SHUFFLE / SORT (id added for net serialization)
@@ -26,8 +26,8 @@ function createDeck(){
       d.push({id:id++,rank:RANKS[r],suit:SUITS[s],value:RV[RANKS[r]]});
     }
   }
-  d.push({id:52,rank:'\u5C0F\u738B',suit:'',value:16,isJoker:'small'});
-  d.push({id:53,rank:'\u5927\u738B',suit:'',value:17,isJoker:'big'});
+  d.push({id:52,rank:'小王',suit:'',value:16,isJoker:'small'});
+  d.push({id:53,rank:'大王',suit:'',value:17,isJoker:'big'});
   return d;
 }
 function shuffle(a){
@@ -742,7 +742,7 @@ function generateHints(hand,lastPlay,lastPlayPlayer,myIdx){
   ============================================================ */
 function GameEngine(opts){
   this.players=opts.players;     // [adapter0, adapter1, adapter2]
-  this.playerNames=opts.names||['\u73A9\u5BB6A','\u73A9\u5BB6B','\u73A9\u5BB6C'];
+  this.playerNames=opts.names||['玩家A','玩家B','玩家C'];
   this.localSeat=(opts.localSeat===undefined)?-1:opts.localSeat; // -1 = host watches all
   this.onState=opts.onState||function(){};
   this.onEvent=opts.onEvent||function(){}; // for UI animations & sounds
