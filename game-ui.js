@@ -593,11 +593,33 @@ function exitToMenu(){
 var peerJSLoaded=false;
 function loadPeerJS(cb){
   if(peerJSLoaded||window.Peer){peerJSLoaded=true;cb();return;}
+  var done=false;
+  var to=setTimeout(function(){
+    if(done)return;done=true;
+    cb(new Error('PeerJS 加载超时（CDN 无法访问）'));
+  },10000);
   var s=document.createElement('script');
   s.src='https://unpkg.com/peerjs@1.5.5/dist/peerjs.min.js';
-  s.onload=function(){peerJSLoaded=true;cb();};
-  s.onerror=function(){cb(new Error('peerjs load failed'));};
+  s.onload=function(){if(done)return;done=true;clearTimeout(to);peerJSLoaded=true;cb();};
+  s.onerror=function(){if(done)return;done=true;clearTimeout(to);cb(new Error('PeerJS 加载失败'));};
   document.body.appendChild(s);
+}
+
+/* ICE servers: only STUN is free; without TURN, symmetric NAT (some carriers) will fail */
+var ICE_CONFIG={
+  iceServers:[
+    {urls:'stun:stun.l.google.com:19302'},
+    {urls:'stun:stun1.l.google.com:19302'},
+    {urls:'stun:stun.qq.com:3478'},
+    {urls:'stun:stun.miwifi.com:3478'}
+  ]
+};
+
+/* short room-code: 6 chars, A-Z 2-9 (skip 0/1/I/O confusables) */
+function makeShortCode(){
+  var s='',ch='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  for(var i=0;i<6;i++) s+=ch.charAt(Math.floor(Math.random()*ch.length));
+  return s;
 }
 
 /* ============================================================
@@ -633,7 +655,7 @@ function makeHostNet(){
         var c=this.conns[ids[i]];
         if(c.alive&&c.seat>=0) seats[c.seat]=c.name;
       }
-      return {roomCode:this.hostPeerId,seats:seats};
+      return {roomCode:this.shortCode||this.hostPeerId,seats:seats};
     },
     broadcastLobby:function(){
       var info=this.buildLobbyInfo();
@@ -784,15 +806,39 @@ function buildHostAdapter(net,seat){
   };
 }
 function hostCreateRoom(cb){
+  toast('正在加载 PeerJS...');
   loadPeerJS(function(err){
-    if(err){cb(err);return;}
+    if(err){toast(err.message);cb(err);return;}
+    toast('正在连接信令服务器...');
     var net=makeHostNet();
-    var peer=new window.Peer(undefined,{debug:0});
+    var code=makeShortCode();
+    var peerId='ddz3-'+code;
+    var peer=new window.Peer(peerId,{debug:0,config:ICE_CONFIG});
     net.peer=peer;
-    peer.on('open',function(id){net.hostPeerId=id;cb(null,net);});
+    net.shortCode=code;
+    var opened=false;
+    var openTo=setTimeout(function(){
+      if(opened)return;
+      toast('连接信令服务器超时（可能被网络拦截）');
+    },15000);
+    peer.on('open',function(id){
+      opened=true;clearTimeout(openTo);
+      net.hostPeerId=id;
+      toast('房间创建成功');
+      cb(null,net);
+    });
     peer.on('error',function(e){
+      var et=(e&&e.type)||'unknown';
       console.error('host peer error',e);
-      toast('联机错误：'+((e&&e.type)||'unknown'));
+      if(et==='unavailable-id'){
+        // 同短码已被占用，重试一次
+        toast('房间号冲突，重新生成...');
+        try{peer.destroy();}catch(_){}
+        setTimeout(function(){hostCreateRoom(cb);},500);
+        return;
+      }
+      toast('联机错误('+et+')');
+      if(!opened) cb(e);
     });
     peer.on('connection',function(conn){
       var clientName='玩家';
@@ -801,7 +847,7 @@ function hostCreateRoom(cb){
         seat=net.findFreeSeat();
         if(seat<0){try{conn.send({type:'rejected',reason:'full'});conn.close();}catch(e){}return;}
         net.conns[conn.peer]={conn:conn,seat:seat,name:clientName,alive:true};
-        try{conn.send({type:'welcome',seat:seat,roomCode:net.hostPeerId,hostName:App.myName});}catch(e){}
+        try{conn.send({type:'welcome',seat:seat,roomCode:net.shortCode,hostName:App.myName});}catch(e){}
         net.broadcastLobby();
       });
       conn.on('data',function(data){
@@ -900,29 +946,61 @@ function makeGuestNet(){
   return net;
 }
 function guestJoinRoom(roomCode,myName,cb){
+  // 兼容：用户输入可能是裸短码（推荐）或带 ddz3- 前缀，统一标准化
+  var code=(roomCode||'').trim().toUpperCase().replace(/[^A-Z0-9-]/g,'');
+  if(code.indexOf('DDZ3-')===0) code=code.substring(5);
+  if(!/^[A-Z2-9]{6}$/.test(code)){
+    var err=new Error('房间号格式错误：应为 6 位字母数字');
+    toast(err.message);cb(err);return;
+  }
+  var targetPeerId='ddz3-'+code;
+  toast('正在加载 PeerJS...');
   loadPeerJS(function(err){
-    if(err){cb(err);return;}
+    if(err){toast(err.message);cb(err);return;}
+    toast('正在连接信令服务器...');
     var net=makeGuestNet();
-    var peer=new window.Peer(undefined,{debug:0});
+    var peer=new window.Peer(undefined,{debug:0,config:ICE_CONFIG});
     net.peer=peer;
+    var calledBack=false;
+    function once(e,n){if(calledBack)return;calledBack=true;cb(e,n);}
+    var signalTo=setTimeout(function(){
+      if(calledBack)return;
+      toast('连不上信令服务器（可能被网络拦截）');
+    },15000);
     peer.on('open',function(){
-      var conn=peer.connect(roomCode,{reliable:true});
+      clearTimeout(signalTo);
+      toast('信令已连接，正在连接房主...');
+      var conn=peer.connect(targetPeerId,{reliable:true,config:ICE_CONFIG});
       net.conn=conn;
-      conn.on('open',function(){try{conn.send({type:'hello',name:myName});}catch(e){}});
+      var connTo=setTimeout(function(){
+        if(calledBack)return;
+        toast('连接房主超时');
+      },20000);
+      conn.on('open',function(){
+        clearTimeout(connTo);
+        toast('已连接房主');
+        try{conn.send({type:'hello',name:myName});}catch(e){}
+        once(null,net);
+      });
       conn.on('data',function(data){if(data&&data.type) handleHostMessage(net,data);});
       conn.on('close',function(){
         toast('与房主断开连接');
         setTimeout(function(){exitToMenu();},1500);
       });
-      conn.on('error',function(){cb(new Error('connect failed'));});
+      conn.on('error',function(e){
+        clearTimeout(connTo);
+        toast('连接房主失败');
+        once(new Error('connect failed'));
+      });
     });
     peer.on('error',function(e){
+      clearTimeout(signalTo);
       var et=e&&e.type;
-      if(et==='peer-unavailable'){toast('房间不存在');cb(new Error('peer-unavailable'));return;}
-      toast('联机错误：'+(et||'unknown'));
-      cb(e);
+      if(et==='peer-unavailable'){toast('房间不存在或房主已退出');once(new Error('peer-unavailable'));return;}
+      if(et==='network'){toast('网络错误（信令服务器无法访问）');once(new Error('network'));return;}
+      toast('联机错误('+(et||'unknown')+')');
+      once(e);
     });
-    cb(null,net);
   });
 }
 function handleHostMessage(net,data){
@@ -1007,7 +1085,7 @@ function showLobbyHost(net){
   var lobby=document.getElementById('viewLobby');
   if(!lobby)return;
   var info=net.buildLobbyInfo();
-  var displayCode=net.hostPeerId;
+  var displayCode=net.shortCode||net.hostPeerId;
   var html='<div class="lobby-panel">';
   html+='<div class="lobby-title">创建房间</div>';
   html+='<div class="lobby-roomcode"><div class="rc-label">房间号</div><div class="rc-val" id="rcVal">'+displayCode+'</div></div>';
@@ -1052,7 +1130,7 @@ function showLobbyJoin(){
   var html='<div class="lobby-panel">';
   html+='<div class="lobby-title">加入房间</div>';
   html+='<div class="lobby-input"><label>你的昵称</label><input type="text" id="joinName" maxlength="12" value="'+(App.myName||'')+'"></div>';
-  html+='<div class="lobby-input"><label>房间号</label><input type="text" id="joinCode" placeholder="粘贴房主的号"></div>';
+  html+='<div class="lobby-input"><label>房间号（6位）</label><input type="text" id="joinCode" maxlength="6" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="6位字母数字" style="text-transform:uppercase;font-family:monospace;letter-spacing:4px;"></div>';
   html+='<div class="lobby-actions">';
   html+='<button class="abtn" id="btnLobbyBack">返回</button>';
   html+='<button class="abtn primary" id="btnDoJoin">加入</button>';
